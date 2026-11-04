@@ -1,205 +1,80 @@
-# YouTube Storage Access Fixer
+# Shut Up YouTube
 
-A lightweight Chrome extension that bypasses Storage Access API restrictions and boosts YouTube performance - fix "Không xem được nội dung này" errors instantly!
+Shut Up YouTube (`v1.2.1`) is a Manifest V3 Chromium extension for `youtube.com` and `youtube-nocookie.com`. It resolves adblocker playback errors, dismisses content warnings, hides YouTube Playables and promotional shelves, applies custom video aspect ratios, and replaces the standard header logo with the YouTube Premium wordmark.
 
-## Features
+## Capabilities
 
-- **Bypass Storage Access API** - Fix "Permission denied" errors on YouTube
-- **Instant Navigation** - Click videos without reload delay 
-- **Performance Boost** - Preconnect servers, block tracking, GPU acceleration
-- **Block Ads/Tracking** - Remove Google Analytics, DoubleClick, ad requests
-- **Auto-Retry** - Automatically reload when video errors detected
-- **Memory Optimization** - Cleanup unused thumbnails, reduce repaints
-- **Lightweight & Fast** - Minimal performance impact, no background lag
+### Adblock playback fix and ad slot removal
+When `su_adblockFix` is enabled, the extension hides page-level ad containers (`#player-ads`, `.video-ads`, `.ytp-ad-module`, `.ytp-ad-overlay-container`, `ytd-ad-slot-renderer`, `ytd-in-feed-ad-layout-renderer`, `ytd-banner-promo-renderer`, `ytd-display-ad-renderer`, `ytd-statement-banner-renderer`, `ytd-masthead-ad-v3-renderer`, and `#masthead-ad`). In the main page context, `inject.js` intercepts single-page navigation (`history.pushState`, `popstate`, and `yt-navigate-finish`) and triggers a clean page reload when navigating to a new `/watch` or `/shorts/` video ID so the player initializes without adblock enforcement errors. It also stubs `document.requestStorageAccess`, `document.hasStorageAccess`, and `document.requestStorageAccessFor` to resolve immediately.
+
+### Automatic content warning bypass
+When `su_warningBypass` is enabled, `content.js` polls for visible age and content confirmation prompts (`#content-warning-ok-button`, `yt-playability-error-supported-renderers`, `yt-player-error-message-renderer`, `#error-screen`, and buttons labeled "I understand" or "Tôi hiểu") and clicks them automatically.
+
+### Playables and promotional shelf removal
+When `su_hidePlayables` is enabled, CSS rules hide YouTube Playables sections (`ytd-mini-game-card-view-model` and any rich section, shelf, reel shelf, horizontal card list, or sidebar guide entry linking to `/playables`), merchandise shelves (`ytd-merch-shelf-renderer`), ticket shelves (`#ticket-shelf`), and ambient video cinematics (`#cinematics`, `#cinematics-container`).
+
+### Video aspect ratio and ultrawide stretch controls
+The extension adds `FIT` and `AUTO` toggle buttons directly to the YouTube player right-hand control bar (`.ytp-right-controls`) and provides five scaling modes in the popup:
+
+| Mode | Setting value | CSS behavior on `#movie_player video` |
+| :--- | :--- | :--- |
+| Stretch | `fill` | `object-fit: fill !important` across full viewport width |
+| Crop | `cover` | `object-fit: cover !important` |
+| 16:9 | `169` | `aspect-ratio: 16 / 9 !important` |
+| 21:9 | `219` | `aspect-ratio: 21 / 9 !important` |
+| 32:9 | `329` | `aspect-ratio: 32 / 9 !important` |
+
+When Auto Stretch (`ytvr_autoStretch`) is active, a `MutationObserver` watches `ytd-watch-flexy` attributes (`theater` and `fullscreen`) along with `document.fullscreenElement`. Aspect ratio overrides then apply only in Theater and Fullscreen modes, while the default watch layout stays at its native dimensions.
+
+### YouTube Premium logo swap
+When `su_premiumLogo` is enabled, `inject.js` replaces the inline SVG inside `ytd-logo` with the YouTube Premium SVG paths (`viewBox="0 0 101 20"`). The original SVG markup and dimensions are cached on the DOM node (`_suOrigSvg`) so toggling the setting off restores the standard logo without reloading the page.
 
 ## Installation
 
-### Chrome/Edge/Brave (Developer Mode)
+1. Clone or download this repository to your local machine:
+   ```bash
+   git clone https://github.com/rainaku/Shut-Up-YouTube.git
+   ```
+2. Open a Chromium-based browser (Chrome, Edge, Brave, or Vivaldi) and navigate to `chrome://extensions`.
+3. Enable Developer mode in the top-right corner.
+4. Click Load unpacked and select the project directory containing `manifest.json`.
 
-1. Download or clone this repository
-2. Open Chrome and navigate to `chrome://extensions/`
-3. Enable **Developer mode** (toggle in top right)
-4. Click **Load unpacked**
-5. Select the `AX` folder
-6. Done! Navigate to YouTube and enjoy smooth playback
+## Architecture and project structure
 
-## Usage
-
-### Automatic Mode (Default)
-1. Install the extension
-2. Navigate to any YouTube video
-3. Extension works automatically - no configuration needed
-4. Click between videos seamlessly without errors
-
-### Extension Popup
-1. Click the extension icon in your browser toolbar
-2. Toggle the main switch to enable/disable
-3. Click "Reload YouTube Tab" to force refresh
-
-## Performance Optimizations
-
-| Feature | Description |
-|---------|-------------|
-| **Preconnect Servers** | Pre-establish connections to YouTube CDN servers |
-| **GPU Acceleration** | CSS transforms for smooth video rendering |
-| **Block Tracking** | Remove analytics/ads requests (faster loading) |
-| **Layout Containment** | Isolate repaints to minimize thrashing |
-| **Prefetch Videos** | Load next video in background |
-| **Disable Ambient Mode** | Remove cinema glow effect (reduces lag) |
-
-## Blocked Requests
-
-The extension blocks these unnecessary requests:
-
-| Domain | Type |
-|--------|------|
-| `youtube.com/api/stats/*` | Tracking |
-| `google-analytics.com/*` | Analytics |
-| `doubleclick.net/*` | Ads |
-| `googleadservices.com/*` | Ads |
-| `googlesyndication.com/*` | Ads |
-| `youtube.com/pagead/*` | Page Ads |
-| `youtube.com/ptracking*` | Player Tracking |
-
-## Project Structure
-
-```
-AX/
-├── manifest.json       # Extension manifest (MV3)
-├── inject.js           # Page context script (MAIN world)
-├── content.js          # Content script (navigation + performance)
-├── background.js       # Service worker
-├── rules.json          # Declarative Net Request rules
-├── popup.html          # Extension popup UI
-├── popup.js            # Popup logic
+```text
+Shut-Up-YouTube/
 ├── icons/
 │   ├── icon16.png
 │   ├── icon48.png
 │   └── icon128.png
-└── README.md
+├── content.js      # Isolated-world content script (CSS injection, warning bypass, ratio controls)
+├── inject.js       # MAIN-world script (Trusted Types policy, storage access stub, SPA reload, logo swap)
+├── manifest.json   # Manifest V3 extension definition
+├── popup.html      # Extension popup markup and styling
+├── popup.js        # Popup state synchronization with chrome.storage.sync
+├── sw.js           # Background service worker initializing default settings on install
+└── LICENSE         # MIT License
 ```
 
-## How It Works
+`manifest.json` registers two content scripts at `document_start` on `*://*.youtube.com/*` and `*://*.youtube-nocookie.com/*` (`all_frames: false`):
 
-### Storage Access Bypass
-```
-YouTube calls requestStorageAccessFor()
-         ↓
-Extension intercepts in MAIN world
-         ↓
-Returns Promise.resolve() immediately
-         ↓
-No "Permission denied" error ✓
-```
+1. `inject.js` executes in `"world": "MAIN"` to access page-level APIs (`window.trustedTypes`, `history.pushState`, and `document.requestStorageAccess`). Because `MAIN` world scripts cannot call `chrome.storage` directly, `inject.js` reads state from `data-su-adblock` and `data-su-logo` attributes on `<html>` and listens for the custom `su-yt-update` window event.
+2. `content.js` executes in the isolated extension world. It injects `#su-yt-style` and `<link rel="preconnect">` tags (`https://i.ytimg.com`, `https://yt3.ggpht.com`, `https://www.gstatic.com`), mirrors `chrome.storage.sync` changes to `<html>` classes and data attributes, dispatches `su-yt-update`, manages the player control buttons, and runs the warning bypass interval.
 
-### Navigation Fix
-```
-User clicks video B
-         ↓
-Extension intercepts click (capture phase)
-         ↓
-preventDefault() + direct navigation
-         ↓
-Page loads fresh → Video plays ✓
-```
+## Configuration and storage keys
 
-## Troubleshooting
+All preferences persist in `chrome.storage.sync` and update active YouTube tabs immediately through `chrome.storage.onChanged`:
 
-### Video still showing error?
-1. Make sure extension is enabled (check badge shows "ON")
-2. Try clicking "Reload YouTube Tab" in popup
-3. Disable other ad blockers temporarily (may conflict)
-4. Clear YouTube cookies and refresh
-
-### Extension not working?
-1. Go to `chrome://extensions/`
-2. Find "YouTube Storage Access Fixer"
-3. Click the reload button (🔄)
-4. Refresh YouTube page
-
-### Buttons/popup not appearing?
-1. Make sure you're on `youtube.com`
-2. Try disabling and re-enabling the extension
-3. Check if Developer mode is still enabled
-
-## Permissions
-
-| Permission | Reason |
-|------------|--------|
-| `storage` | Save extension state (ON/OFF) |
-| `scripting` | Inject scripts into YouTube pages |
-| `declarativeNetRequest` | Block tracking/ad requests |
-| `host_permissions` | Access YouTube and Google CDN domains |
+| Storage key | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `su_adblockFix` | `boolean` | `true` | Hides ad slots and reloads video navigations to bypass adblock warnings |
+| `su_warningBypass` | `boolean` | `true` | Automatically clicks through age and content warning overlays |
+| `su_hidePlayables` | `boolean` | `true` | Hides YouTube Playables, merch shelves, ticket shelves, and ambient cinematics |
+| `su_premiumLogo` | `boolean` | `true` | Replaces the header logo with the YouTube Premium SVG |
+| `ytvr_enabled` | `boolean` | `true` | Master toggle for video stretching and custom aspect ratios (`FIT` button) |
+| `ytvr_ratio` | `string` | `"fill"` | Active aspect ratio preset (`"fill"`, `"cover"`, `"169"`, `"219"`, `"329"`) |
+| `ytvr_autoStretch` | `boolean` | `true` | Restricts aspect ratio overrides to Theater and Fullscreen modes (`AUTO` button) |
 
 ## License
 
-MIT License - Free to use and modify
-
----
-
-## Changelog
-
-### v1.0.2 (2026-01-19) - Major Bug Fixes
-
-#### 🐛 Bug Fixes
-
-**1. Fix video không load khi click từ trang chủ/kênh YouTube**
-- **Vấn đề**: Click video từ trang chủ (`youtube.com`) hoặc trang kênh (`youtube.com/@channel`) bị chặn, video không phát được
-- **Nguyên nhân**: Content script đang intercept click events và chặn YouTube SPA navigation
-- **Giải pháp**: Loại bỏ click interceptor, thay bằng auto-reload khi navigate đến video mới
-
-**2. Fix lỗi loop reload vô hạn khi vào trang kênh**
-- **Vấn đề**: Khi vào trang kênh, trang liên tục reload không dừng
-- **Nguyên nhân**: SPA navigation handler gọi `window.location.reload()` mỗi khi URL thay đổi
-- **Giải pháp**: Thay đổi logic chỉ reload khi navigate đến video mới, không reload khi navigate trong kênh
-
-**3. Fix "Không xem được nội dung này" error**
-- **Vấn đề**: Video hiển thị lỗi "Không xem được nội dung này. Vui lòng thử lại sau."
-- **Nguyên nhân**: 
-  - XHR interceptor trong `inject.js` block YouTube API requests
-  - `rules.json` block quá nhiều endpoints quan trọng
-  - `background.js` dùng deprecated webRequest API (MV3 không hỗ trợ)
-- **Giải pháp**: 
-  - Loại bỏ XHR/fetch interception
-  - Đơn giản hóa blocking rules chỉ block ads domains
-  - Remove deprecated webRequest code
-
-#### 🔧 Technical Changes
-
-| File | Changes |
-|------|---------|
-| `content.js` | Thay click interceptor bằng MutationObserver để detect URL changes và auto-reload |
-| `inject.js` | Loại bỏ XHR/fetch interception, chỉ giữ performance CSS và Storage Access bypass |
-| `background.js` | Remove deprecated webRequest blocking (MV3 dùng declarativeNetRequest) |
-| `rules.json` | Đơn giản hóa, chỉ block ads domains (doubleclick, googleads, etc.) |
-| `manifest.json` | Loại bỏ declarativeNetRequest (tạm thời), set `all_frames: false` |
-
-#### ⚡ Logic mới cho video navigation
-
-```javascript
-// Khi URL thay đổi trong YouTube SPA:
-isGoingToVideo = URL mới là /watch hoặc /shorts
-wasNotOnVideo = URL cũ KHÔNG phải video (trang chủ, kênh, search)
-isDifferentVideo = Video ID khác nhau
-
-// Reload khi:
-if (isGoingToVideo && (wasNotOnVideo || isDifferentVideo)) {
-    window.location.reload();
-}
-```
-
-**Các trường hợp sẽ auto-reload:**
-- ✅ Trang chủ → Video
-- ✅ Trang kênh → Video  
-- ✅ Trang search → Video
-- ✅ Video A → Video B (khác video)
-- ❌ Video → Video (cùng video) - không reload
-
----
-
-### v1.0.1 - Initial Release
-
-- Storage Access API bypass
-- Performance optimizations (GPU acceleration, preconnect)
-- Ad/tracking blocking via declarativeNetRequest
-- Auto-retry on video errors
+Released under the [MIT License](LICENSE). Copyright (c) 2026 rain.
