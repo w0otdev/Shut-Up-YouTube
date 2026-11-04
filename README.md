@@ -1,80 +1,45 @@
 # Shut Up YouTube
 
-Shut Up YouTube (`v1.2.1`) is a Manifest V3 Chromium extension for `youtube.com` and `youtube-nocookie.com`. It resolves adblocker playback errors, dismisses content warnings, hides YouTube Playables and promotional shelves, applies custom video aspect ratios, and replaces the standard header logo with the YouTube Premium wordmark.
+A lightweight Chromium browser extension (`v1.2.1`) that fixes YouTube adblocker playback errors, skips content warnings, removes page clutter, and adds ultrawide aspect ratio controls.
 
-## Capabilities
+## Features
 
-### Adblock playback fix and ad slot removal
-When `su_adblockFix` is enabled, the extension hides page-level ad containers (`#player-ads`, `.video-ads`, `.ytp-ad-module`, `.ytp-ad-overlay-container`, `ytd-ad-slot-renderer`, `ytd-in-feed-ad-layout-renderer`, `ytd-banner-promo-renderer`, `ytd-display-ad-renderer`, `ytd-statement-banner-renderer`, `ytd-masthead-ad-v3-renderer`, and `#masthead-ad`). In the main page context, `inject.js` intercepts single-page navigation (`history.pushState`, `popstate`, and `yt-navigate-finish`) and triggers a clean page reload when navigating to a new `/watch` or `/shorts/` video ID so the player initializes without adblock enforcement errors. It also stubs `document.requestStorageAccess`, `document.hasStorageAccess`, and `document.requestStorageAccessFor` to resolve immediately.
+- Fixes the "Ad blockers violate YouTube's Terms of Service" playback error and hides banner and feed ad slots.
+- Automatically clicks through age and content warning screens ("I understand") as soon as they appear.
+- Hides YouTube Playables mini-games, merchandise shelves, ticket promos, and ambient video glow effects.
+- Replaces the standard YouTube header logo with the YouTube Premium logo.
+- Adds custom video aspect ratio and ultrawide screen fitting with instant toggles in the player bar and extension popup.
 
-### Automatic content warning bypass
-When `su_warningBypass` is enabled, `content.js` polls for visible age and content confirmation prompts (`#content-warning-ok-button`, `yt-playability-error-supported-renderers`, `yt-player-error-message-renderer`, `#error-screen`, and buttons labeled "I understand" or "Tôi hiểu") and clicks them automatically.
+## Video player controls
 
-### Playables and promotional shelf removal
-When `su_hidePlayables` is enabled, CSS rules hide YouTube Playables sections (`ytd-mini-game-card-view-model` and any rich section, shelf, reel shelf, horizontal card list, or sidebar guide entry linking to `/playables`), merchandise shelves (`ytd-merch-shelf-renderer`), ticket shelves (`#ticket-shelf`), and ambient video cinematics (`#cinematics`, `#cinematics-container`).
+The extension adds two quick-toggle buttons directly to the bottom-right YouTube player controls:
 
-### Video aspect ratio and ultrawide stretch controls
-The extension adds `FIT` and `AUTO` toggle buttons directly to the YouTube player right-hand control bar (`.ytp-right-controls`) and provides five scaling modes in the popup:
+| Control | Function |
+| :--- | :--- |
+| `FIT` | Toggles custom video aspect ratio scaling on or off |
+| `AUTO` | Applies scaling only in Theater and Fullscreen modes, keeping the default view unchanged |
 
-| Mode | Setting value | CSS behavior on `#movie_player video` |
-| :--- | :--- | :--- |
-| Stretch | `fill` | `object-fit: fill !important` across full viewport width |
-| Crop | `cover` | `object-fit: cover !important` |
-| 16:9 | `169` | `aspect-ratio: 16 / 9 !important` |
-| 21:9 | `219` | `aspect-ratio: 21 / 9 !important` |
-| 32:9 | `329` | `aspect-ratio: 32 / 9 !important` |
-
-When Auto Stretch (`ytvr_autoStretch`) is active, a `MutationObserver` watches `ytd-watch-flexy` attributes (`theater` and `fullscreen`) along with `document.fullscreenElement`. Aspect ratio overrides then apply only in Theater and Fullscreen modes, while the default watch layout stays at its native dimensions.
-
-### YouTube Premium logo swap
-When `su_premiumLogo` is enabled, `inject.js` replaces the inline SVG inside `ytd-logo` with the YouTube Premium SVG paths (`viewBox="0 0 101 20"`). The original SVG markup and dimensions are cached on the DOM node (`_suOrigSvg`) so toggling the setting off restores the standard logo without reloading the page.
+You can also open the extension popup at any time to switch between five aspect ratio modes:
+- `Fill`: Stretches the video to fill the entire player area edge to edge.
+- `Cover`: Zooms and crops the video to cover the screen without distortion.
+- `16:9`, `21:9`, `32:9`: Forces standard widescreen or ultrawide proportions.
 
 ## Installation
 
-1. Clone or download this repository to your local machine:
+1. Download or clone this repository:
    ```bash
-   git clone https://github.com/rainaku/Shut-Up-YouTube.git
+   git clone https://github.com/w0otdev/Shut-Up-YouTube.git
    ```
-2. Open a Chromium-based browser (Chrome, Edge, Brave, or Vivaldi) and navigate to `chrome://extensions`.
-3. Enable Developer mode in the top-right corner.
-4. Click Load unpacked and select the project directory containing `manifest.json`.
+2. Open your Chromium browser (Chrome, Brave, Edge, or Vivaldi) and go to `chrome://extensions`.
+3. Turn on Developer mode in the top-right corner.
+4. Click Load unpacked and select the `Shut-Up-YouTube` folder.
 
-## Architecture and project structure
+## Privacy and legal
 
-```text
-Shut-Up-YouTube/
-├── icons/
-│   ├── icon16.png
-│   ├── icon48.png
-│   └── icon128.png
-├── content.js      # Isolated-world content script (CSS injection, warning bypass, ratio controls)
-├── inject.js       # MAIN-world script (Trusted Types policy, storage access stub, SPA reload, logo swap)
-├── manifest.json   # Manifest V3 extension definition
-├── popup.html      # Extension popup markup and styling
-├── popup.js        # Popup state synchronization with chrome.storage.sync
-├── sw.js           # Background service worker initializing default settings on install
-└── LICENSE         # MIT License
-```
+Shut Up YouTube runs entirely locally on `youtube.com` and `youtube-nocookie.com`. It only uses the `storage` permission to save your toggle preferences locally and collects zero user data or telemetry. See the full [Privacy Policy](PRIVACY_POLICY.md) for details.
 
-`manifest.json` registers two content scripts at `document_start` on `*://*.youtube.com/*` and `*://*.youtube-nocookie.com/*` (`all_frames: false`):
-
-1. `inject.js` executes in `"world": "MAIN"` to access page-level APIs (`window.trustedTypes`, `history.pushState`, and `document.requestStorageAccess`). Because `MAIN` world scripts cannot call `chrome.storage` directly, `inject.js` reads state from `data-su-adblock` and `data-su-logo` attributes on `<html>` and listens for the custom `su-yt-update` window event.
-2. `content.js` executes in the isolated extension world. It injects `#su-yt-style` and `<link rel="preconnect">` tags (`https://i.ytimg.com`, `https://yt3.ggpht.com`, `https://www.gstatic.com`), mirrors `chrome.storage.sync` changes to `<html>` classes and data attributes, dispatches `su-yt-update`, manages the player control buttons, and runs the warning bypass interval.
-
-## Configuration and storage keys
-
-All preferences persist in `chrome.storage.sync` and update active YouTube tabs immediately through `chrome.storage.onChanged`:
-
-| Storage key | Type | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `su_adblockFix` | `boolean` | `true` | Hides ad slots and reloads video navigations to bypass adblock warnings |
-| `su_warningBypass` | `boolean` | `true` | Automatically clicks through age and content warning overlays |
-| `su_hidePlayables` | `boolean` | `true` | Hides YouTube Playables, merch shelves, ticket shelves, and ambient cinematics |
-| `su_premiumLogo` | `boolean` | `true` | Replaces the header logo with the YouTube Premium SVG |
-| `ytvr_enabled` | `boolean` | `true` | Master toggle for video stretching and custom aspect ratios (`FIT` button) |
-| `ytvr_ratio` | `string` | `"fill"` | Active aspect ratio preset (`"fill"`, `"cover"`, `"169"`, `"219"`, `"329"`) |
-| `ytvr_autoStretch` | `boolean` | `true` | Restricts aspect ratio overrides to Theater and Fullscreen modes (`AUTO` button) |
+This project is an independent open-source tool and is not affiliated with, endorsed by, or sponsored by YouTube, LLC or Google LLC. The extension is provided strictly "AS IS" without warranty of any kind, and users are solely responsible for complying with YouTube's Terms of Service. Read the full [Terms of Service](TERMS_OF_SERVICE.md) before use.
 
 ## License
 
-Released under the [MIT License](LICENSE). Copyright (c) 2026 rain.
+[MIT License](LICENSE) © 2026 w0otdev
