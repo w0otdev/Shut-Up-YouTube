@@ -2,12 +2,14 @@
 {
   let settings = SU_SETTINGS.normalize();
   let ready = false;
-  let queued = false;
+  let timer = null;
+  let dirty = 0;
   let observedPlayer = null;
   const changesDuringLoad = {};
   const ratioValues = { "169": 16 / 9, "219": 21 / 9, "329": 32 / 9 };
   const errorSelectors = "yt-playability-error-supported-renderers, yt-player-error-message-renderer, #error-screen, ytd-enforcement-message-view-model";
-  const resizeObserver = new ResizeObserver(schedule);
+  const { PLAYER, LOGO, WARNING, ALL } = SU_ACTIVITY;
+  const resizeObserver = new ResizeObserver(() => schedule(PLAYER));
 
   function setAttribute(element, name, value) {
     if (element.getAttribute(name) !== String(value)) element.setAttribute(name, String(value));
@@ -58,12 +60,12 @@
 
   function save(patch) {
     settings = SU_SETTINGS.normalize({ ...settings, ...patch });
-    refresh();
+    applySettings();
     chrome.storage.sync.set(patch).catch(() => {
       // Reflect the persisted state if sync storage rejected the write.
       chrome.storage.sync.get(Object.keys(SU_SETTINGS.defaults)).then(data => {
         settings = SU_SETTINGS.normalize(data);
-        schedule();
+        applySettings();
       }).catch(() => {});
     });
   }
@@ -127,24 +129,51 @@
     };
   }
 
-  function refresh() {
+  function applySettings() {
     if (!ready || !document.documentElement) return;
     const root = document.documentElement;
     root.classList.toggle("su-adblock-on", settings.su_adblockFix);
     root.classList.toggle("su-playables-on", settings.su_hidePlayables);
+    SU_FILTERS.sync(settings);
+    if (!settings.su_warningBypass) SU_WARNINGS.tick(false);
     setAttribute(root, "data-su-adblock", settings.su_adblockFix ? "1" : "0");
-    suSyncLogo(settings.su_premiumLogo);
-    const player = document.getElementById("movie_player");
-    playerButtons(player);
-    applyRatio(player);
-    SU_WARNINGS.tick(settings.su_warningBypass);
-    skipAd(player);
+    schedule(ALL);
   }
 
-  function schedule() {
-    if (queued) return;
-    queued = true;
-    setTimeout(() => { queued = false; refresh(); }, 60);
+  function refresh() {
+    timer = null;
+    if (!ready || !document.documentElement || document.hidden) return;
+    const work = dirty;
+    dirty = 0;
+    if (work & (PLAYER | WARNING)) SU_ACTIVITY.bind();
+    if (work & LOGO) suSyncLogo(settings.su_premiumLogo);
+    if (work & PLAYER) {
+      const player = document.getElementById("movie_player");
+      playerButtons(player);
+      applyRatio(player);
+      skipAd(player);
+    }
+    if (work & WARNING) SU_WARNINGS.tick(settings.su_warningBypass);
+  }
+
+  function schedule(work = ALL) {
+    dirty |= work;
+    if (timer !== null || !ready || document.hidden) return;
+    timer = setTimeout(refresh, 16);
+  }
+
+  function resume() {
+    SU_ACTIVITY.start(schedule);
+    applySettings();
+  }
+
+  function suspend() {
+    SU_ACTIVITY.stop();
+    resizeObserver.disconnect();
+    observedPlayer = null;
+    SU_WARNINGS.suspend();
+    if (timer !== null) clearTimeout(timer);
+    timer = null;
   }
 
   chrome.storage.onChanged.addListener((changes, area) => {
@@ -153,29 +182,31 @@
     for (const key of Object.keys(SU_SETTINGS.defaults)) {
       if (changes[key]) patch[key] = changes[key].newValue;
     }
-    Object.assign(changesDuringLoad, patch);
+    if (!Object.keys(patch).length) return;
+    if (!ready) Object.assign(changesDuringLoad, patch);
     settings = SU_SETTINGS.normalize({ ...settings, ...patch });
-    refresh();
+    applySettings();
   });
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message?.type === "su-status") sendResponse(status());
   });
 
-  new MutationObserver(schedule).observe(document, {
-    childList: true, subtree: true, attributes: true,
-    attributeFilter: ["class", "style", "hidden", "theater", "fullscreen"]
-  });
-  document.addEventListener("fullscreenchange", schedule);
-  window.addEventListener("resize", schedule);
-  window.addEventListener("yt-navigate-finish", schedule);
-  window.addEventListener("popstate", schedule);
-  document.addEventListener("DOMContentLoaded", schedule, { once: true });
-  // Handles delayed controls, non-DOM player state, and background tab resume.
-  setInterval(() => { if (!document.hidden) schedule(); }, 1000);
+  document.addEventListener("fullscreenchange", () => schedule(PLAYER));
+  window.addEventListener("resize", () => schedule(PLAYER), { passive: true });
+  window.addEventListener("yt-navigate-finish", () => schedule(ALL));
+  window.addEventListener("popstate", () => schedule(ALL));
+  document.addEventListener("DOMContentLoaded", applySettings, { once: true });
+  document.addEventListener("loadeddata", event => {
+    if (event.target.matches?.("#movie_player video")) schedule(WARNING);
+  }, true);
+  document.addEventListener("visibilitychange", () => document.hidden ? suspend() : resume());
+  window.addEventListener("pagehide", suspend);
+  window.addEventListener("pageshow", () => { if (!document.hidden) resume(); });
   chrome.storage.sync.get(Object.keys(SU_SETTINGS.defaults)).then(data => {
     settings = SU_SETTINGS.normalize({ ...data, ...changesDuringLoad });
     ready = true;
-    refresh();
+    if (!document.hidden) resume();
+    else applySettings();
   }).catch(() => {
     // Keep hooks disabled if saved preferences cannot be read.
   });

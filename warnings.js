@@ -23,6 +23,16 @@ globalThis.SU_WARNINGS = (() => {
   let wasEnabled = false;
   let attempted = false;
   let state = "idle";
+  let retryTimer = null;
+
+  function suspend() {
+    if (retryTimer !== null) clearTimeout(retryTimer);
+    retryTimer = null;
+  }
+
+  function retry(delay) {
+    if (!document.hidden) retryTimer = setTimeout(() => tick(wasEnabled), delay);
+  }
 
   function normalize(text) {
     return (text || "").normalize("NFKC").replace(/[\u200B-\u200F\uFEFF]/g, "").replace(/\s+/g, " ").trim();
@@ -54,6 +64,7 @@ globalThis.SU_WARNINGS = (() => {
   }
 
   function tick(enabled) {
+    suspend();
     const currentVideo = videoId() || location.pathname;
     if (lastVideo !== currentVideo || wasEnabled !== enabled) {
       attempts = new Map();
@@ -99,12 +110,14 @@ globalThis.SU_WARNINGS = (() => {
         const previous = attempts.get(signature) || { count: 0, time: 0 };
         if (previous.count >= maxAttempts) continue;
         exhausted = false;
-        if (Date.now() - previous.time < retryDelay) continue;
+        const remaining = retryDelay - (Date.now() - previous.time);
+        if (remaining > 0) { retry(remaining); return; }
         attempts.set(signature, { count: previous.count + 1, time: Date.now() });
         attempted = true;
         // Preserve the native href, player parameters, and YouTube event handler.
         // A click can happen before hydration; retry only while the prompt remains.
         button.click();
+        retry(retryDelay);
         return;
       }
       if (exhausted) state = "failed";
@@ -133,5 +146,5 @@ globalThis.SU_WARNINGS = (() => {
     };
     return { state, message: messages[state] };
   }
-  return { tick, status };
+  return { tick, status, suspend, selector: `${rootsSelector},${explicitSelector}` };
 })();

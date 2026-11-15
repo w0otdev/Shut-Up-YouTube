@@ -5,6 +5,8 @@ globalThis.SU_SETTINGS = (() => {
     su_adblockFix: true,
     su_warningBypass: true,
     su_hidePlayables: true,
+    su_hideShorts: true,
+    su_hideAI: true,
     su_premiumLogo: true,
     ytvr_enabled: true,
     ytvr_ratio: "fill",

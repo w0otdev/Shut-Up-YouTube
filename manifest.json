@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Shut Up YouTube",
-  "version": "1.2.3",
-  "description": "YouTube player ad filtering, content warning confirmation, Playables hiding, custom aspect ratios, and a cosmetic Premium logo.",
+  "version": "2.0.0",
+  "description": "Filter YouTube ads, hide Shorts and AI-labeled videos, confirm content warnings, hide Playables, and customize video fit and logo.",
   "permissions": [
     "storage"
   ],
@@ -29,7 +29,7 @@
         "*://*.youtube.com/*",
         "*://*.youtube-nocookie.com/*"
       ],
-      "js": ["settings.js", "logo.js", "warnings.js", "content.js"],
+      "js": ["settings.js", "logo.js", "warnings.js", "filters.js", "activity.js", "content.js"],
       "css": ["content.css"],
       "run_at": "document_start",
       "all_frames": true
@@ -38,14 +38,16 @@
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
-      "16": "icons/icon16.png",
-      "48": "icons/icon48.png",
-      "128": "icons/icon128.png"
+      "16": "icons/stfu-16.png",
+      "32": "icons/stfu-32.png",
+      "48": "icons/stfu-48.png",
+      "128": "icons/stfu-128.png"
     }
   },
   "icons": {
-    "16": "icons/icon16.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
+    "16": "icons/stfu-16.png",
+    "32": "icons/stfu-32.png",
+    "48": "icons/stfu-48.png",
+    "128": "icons/stfu-128.png"
   }
 }

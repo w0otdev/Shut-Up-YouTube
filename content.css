@@ -1,4 +1,5 @@
 #cinematics, #cinematics-container { display: none !important; }
+[data-su-hide-shorts], [data-su-hide-ai] { display: none !important; }
 html.su-adblock-on :is(#player-ads, .ytp-ad-overlay-container, ytd-ad-slot-renderer,
   ytd-in-feed-ad-layout-renderer, ytd-banner-promo-renderer, ytd-display-ad-renderer,
   ytd-masthead-ad-v3-renderer, #masthead-ad) { display: none !important; }

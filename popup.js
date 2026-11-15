@@ -3,6 +3,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const toggleKeys = {
     adblockToggle: "su_adblockFix", warningToggle: "su_warningBypass",
     playablesToggle: "su_hidePlayables", logoToggle: "su_premiumLogo",
+    shortsToggle: "su_hideShorts", aiToggle: "su_hideAI",
     enableToggle: "ytvr_enabled", autoStretchToggle: "ytvr_autoStretch"
   };
   const ratios = [...document.querySelectorAll(".ratio-btn")];

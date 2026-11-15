@@ -1,0 +1,38 @@
+<style>
+  #feed :is(ytd-video-renderer, ytd-compact-video-renderer, yt-lockup-view-model,
+    ytd-rich-item-renderer, ytd-rich-section-renderer, ytd-rich-shelf-renderer,
+    ytd-reel-shelf-renderer, ytm-shorts-lockup-view-model, ytd-guide-entry-renderer,
+    ytd-mini-guide-entry-renderer, ytd-playlist-video-renderer, grid-shelf-view-model) { display: block; padding: 6px; }
+  #feed [hidden] { display: none; }
+</style>
+<div id="feed">
+  <ytd-guide-entry-renderer id="shorts-nav"><a href="/shorts/">Shorts</a></ytd-guide-entry-renderer>
+  <ytd-mini-guide-entry-renderer id="shorts-mini-nav"><a href="https://www.youtube.com/shorts/">Shorts</a></ytd-mini-guide-entry-renderer>
+  <ytd-rich-section-renderer id="shorts-section">
+    <ytd-rich-shelf-renderer is-shorts><h2>Shorts</h2><ytm-shorts-lockup-view-model><h3><a href="/shorts/short000001">A short</a></h3></ytm-shorts-lockup-view-model></ytd-rich-shelf-renderer>
+  </ytd-rich-section-renderer>
+  <ytd-reel-shelf-renderer id="shorts-search"><h2>Shorts</h2><ytm-shorts-lockup-view-model><a href="/shorts/short000002">Another short</a></ytm-shorts-lockup-view-model></ytd-reel-shelf-renderer>
+  <grid-shelf-view-model id="modern-shorts-grid"><h2>Shorts</h2><div class="ytGridShelfViewModelGridShelfRow"><div class="ytGridShelfViewModelGridShelfItem"><ytm-shorts-lockup-view-model-v2><ytm-shorts-lockup-view-model><h3><a href="/shorts/modern00001">Modern Short</a></h3></ytm-shorts-lockup-view-model></ytm-shorts-lockup-view-model-v2></div></div></grid-shelf-view-model>
+  <grid-shelf-view-model id="modern-mixed-grid"><h2>Recommended</h2><div class="ytGridShelfViewModelGridShelfItem" id="modern-ai-cell"><yt-lockup-view-model><h3><a href="/watch?v=modern00002">Made with AI</a></h3></yt-lockup-view-model></div><div class="ytGridShelfViewModelGridShelfItem"><ytm-shorts-lockup-view-model><h3><a href="/shorts/modern00003">Short</a></h3></ytm-shorts-lockup-view-model></div><div class="ytGridShelfViewModelGridShelfItem" id="modern-normal-cell"><yt-lockup-view-model><h3><a href="/watch?v=modern00004">Real footage</a></h3></yt-lockup-view-model></div></grid-shelf-view-model>
+  <ytd-rich-item-renderer id="shorts-card"><ytm-shorts-lockup-view-model><h3><a href="/shorts/short000003">A short card</a></h3></ytm-shorts-lockup-view-model></ytd-rich-item-renderer>
+  <ytd-video-renderer id="shorts-absolute"><h3><a href="https://www.youtube.com/shorts/short000004?feature=share">Absolute Short</a></h3></ytd-video-renderer>
+  <ytd-rich-shelf-renderer id="mixed-shelf">
+    <ytd-video-renderer id="normal-mixed"><h3><a href="/watch?v=normal00001">Normal video</a></h3></ytd-video-renderer>
+    <ytd-video-renderer id="short-mixed"><h3><a href="/shorts/short000005">Short in a mixed shelf</a></h3></ytd-video-renderer>
+  </ytd-rich-shelf-renderer>
+  <ytd-rich-item-renderer id="ai-title"><yt-lockup-view-model><h3><a href="/watch?v=ai000000001" title="AI-generated landscape">Landscape</a></h3></yt-lockup-view-model></ytd-rich-item-renderer>
+  <ytd-compact-video-renderer id="ai-badge"><h3><a href="/watch?v=ai000000002">A landscape</a></h3><ytd-badge-supported-renderer><badge-shape aria-label="Made with AI"></badge-shape></ytd-badge-supported-renderer></ytd-compact-video-renderer>
+  <ytd-video-renderer id="ai-description"><h3><a href="/watch?v=ai000000003">A music video</a></h3><div class="metadata-snippet-text">This video was generated with AI.</div></ytd-video-renderer>
+  <ytd-video-renderer id="ai-vietnamese"><h3><a href="/watch?v=ai000000004">Phong cảnh được tạo bằng AI</a></h3></ytd-video-renderer>
+  <ytd-video-renderer id="ai-disclosure"><h3><a href="/watch?v=ai000000005">An animation</a></h3><ytd-badge-supported-renderer>Altered or synthetic content</ytd-badge-supported-renderer></ytd-video-renderer>
+  <ytd-video-renderer id="ai-vietnamese-label"><h3><a href="/watch?v=ai000000006">Hoạt hình</a></h3><ytd-badge-supported-renderer>Nội dung đã được chỉnh sửa hoặc nội dung nhân tạo</ytd-badge-supported-renderer></ytd-video-renderer>
+  <ytd-video-renderer id="ai-short"><h3><a href="/shorts/aishort0001">#aigenerated sunset</a></h3></ytd-video-renderer>
+  <ytd-video-renderer id="normal-ai-topic"><h3><a href="/watch?v=normal00002">AI news: Sora and Veo explained</a></h3></ytd-video-renderer>
+  <yt-lockup-view-model id="normal-ai-channel"><h3><a href="/watch?v=normal00003">A real landscape</a></h3><div class="yt-content-metadata-view-model__metadata-text"><a href="/@AIgenerated">AI-generated channel</a></div></yt-lockup-view-model>
+  <ytd-video-renderer id="normal-negation"><h3><a href="/watch?v=normal00004">Real footage, not AI-generated</a></h3></ytd-video-renderer>
+  <ytd-video-renderer id="normal-vietnamese"><h3><a href="/watch?v=normal00005">Không phải do AI tạo</a></h3></ytd-video-renderer>
+  <ytd-video-renderer id="normal-query"><h3><a href="/watch?v=normal00006&amp;next=/shorts/123">Normal watch URL</a></h3><div id="description-text"><a href="/shorts/short000006">Related short</a></div></ytd-video-renderer>
+  <ytd-video-renderer id="normal-external"><h3><a href="https://example.com/shorts/123">External link</a></h3></ytd-video-renderer>
+  <ytd-playlist-video-renderer id="native-hidden" hidden><h3><a href="/watch?v=ai000000007">Made with AI</a></h3></ytd-playlist-video-renderer>
+  <ytd-video-renderer id="recycled"><h3><a href="/watch?v=normal00007">Original footage</a></h3><ytd-badge-supported-renderer><badge-shape aria-label="HD"></badge-shape></ytd-badge-supported-renderer></ytd-video-renderer>
+</div>

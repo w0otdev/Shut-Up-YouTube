@@ -3,6 +3,7 @@ const path = require("node:path");
 const fs = require("node:fs");
 const fixture = fs.readFileSync(path.join(__dirname, "fixture.html"), "utf8");
 const warningFixture = fs.readFileSync(path.join(__dirname, "warning-interstitial.html"), "utf8");
+const feedFixture = fs.readFileSync(path.join(__dirname, "feed-fixture.html"), "utf8");
 const root = path.resolve(__dirname, "..");
 const raw = { playabilityStatus: { status: "OK" }, streamingData: { formats: [{ url: "https://example.invalid/video" }] }, adPlacements: [1], playerAds: [2], adSlots: [3] };
 const test = base.extend({
@@ -32,6 +33,241 @@ const test = base.extend({
     await context.close();
     expect(errors).toEqual([]);
   }
+});
+
+async function openFeed(e) {
+  await e.context.route("**/watch?**", route => route.fulfill({
+    contentType: "text/html", headers: { "Content-Security-Policy": "require-trusted-types-for 'script'" },
+    body: fixture.replace("</body>", feedFixture + "</body>")
+  }));
+  await e.open();
+}
+
+async function isolatedWorld(e) {
+  const cdp = await e.context.newCDPSession(e.page);
+  const contexts = [];
+  cdp.on("Runtime.executionContextCreated", ({ context }) => contexts.push(context));
+  await cdp.send("Runtime.enable");
+  for (const context of contexts) {
+    const check = await cdp.send("Runtime.evaluate", { expression: "typeof SU_WARNINGS !== 'undefined'", contextId: context.id });
+    if (check.result.value) return async expression => {
+      const result = await cdp.send("Runtime.evaluate", { expression, contextId: context.id, returnByValue: true });
+      if (result.exceptionDetails) throw new Error(result.exceptionDetails.text);
+      return result.result.value;
+    };
+  }
+  throw new Error("Extension world not found");
+}
+
+test("idle pages and unrelated comment updates do not rescan player, warnings or logos", async ({ extension: e }) => {
+  await e.open();
+  await e.page.waitForTimeout(250);
+  const evaluate = await isolatedWorld(e);
+  await evaluate(`(() => {
+    globalThis.scanCounts = { queries: 0, warnings: 0, logos: 0 };
+    const query = Document.prototype.querySelectorAll;
+    Document.prototype.querySelectorAll = function (...args) { scanCounts.queries++; return Reflect.apply(query, this, args); };
+    const tick = SU_WARNINGS.tick;
+    SU_WARNINGS.tick = (...args) => { scanCounts.warnings++; return tick(...args); };
+    const logo = suSyncLogo;
+    globalThis.suSyncLogo = (...args) => { scanCounts.logos++; return logo(...args); };
+  })()`);
+  await e.page.waitForTimeout(2200);
+  await e.page.evaluate(() => new Promise(resolve => {
+    const comments = document.createElement("ytd-comments"); document.body.append(comments);
+    let updates = 0;
+    const timer = setInterval(() => {
+      comments.className = `update-${updates}`;
+      comments.style.opacity = updates % 2 ? "1" : "0.9";
+      comments.textContent = `Comment ${updates++}`;
+      if (updates === 30) { clearInterval(timer); setTimeout(resolve, 100); }
+    }, 20);
+  }));
+  expect(await evaluate("scanCounts")).toEqual({ queries: 0, warnings: 0, logos: 0 });
+});
+
+test("suspended tabs release queued work and catch up with replaced players and feed cards on resume", async ({ extension: e }) => {
+  await openFeed(e);
+  await expect(e.page.locator("#ai-title")).toBeHidden();
+  const evaluate = await isolatedWorld(e);
+  // Model the browser visibility transition in the extension's isolated world.
+  await evaluate(`Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }); document.dispatchEvent(new Event('visibilitychange'));`);
+  await e.page.evaluate(() => {
+    const card = document.createElement("ytd-video-renderer"); card.id = "background-card";
+    const h3 = document.createElement("h3"); const a = document.createElement("a");
+    a.href = "/watch?v=background1"; a.textContent = "Made with AI"; h3.append(a); card.append(h3);
+    document.getElementById("feed").append(card);
+    const player = document.getElementById("movie_player");
+    const next = player.cloneNode(true); next.querySelector(".ytvr-button-container").remove(); player.replaceWith(next);
+  });
+  await e.page.waitForTimeout(200);
+  await expect(e.page.locator("#background-card")).not.toHaveAttribute("data-su-hide-ai");
+  await expect(e.page.locator("#ytvr-stretch-btn")).toHaveCount(0);
+  await evaluate(`delete document.hidden; document.dispatchEvent(new Event('visibilitychange'));`);
+  await expect(e.page.locator("#background-card")).toBeHidden();
+  await expect(e.page.locator("#ytvr-stretch-btn")).toHaveCount(1);
+  await e.set({ ytvr_autoStretch: false, ytvr_ratio: "219" });
+  await expect.poll(() => e.page.locator("video").evaluate(el => el.clientWidth / el.clientHeight)).toBeCloseTo(21 / 9, 2);
+});
+
+test("an existing warning reacts when its hidden wrapper becomes visible", async ({ extension: e }) => {
+  await e.open();
+  await e.page.evaluate(() => {
+    const wrapper = document.createElement("div"); wrapper.id = "warning-wrapper"; wrapper.hidden = true;
+    const dialog = document.createElement("yt-confirm-dialog-renderer");
+    const button = document.createElement("button"); button.textContent = "I understand";
+    button.onclick = () => { clicks.warning++; wrapper.remove(); };
+    dialog.append(button); wrapper.append(dialog); document.body.append(wrapper);
+  });
+  await e.page.waitForTimeout(200);
+  expect(await e.page.evaluate(() => clicks.warning)).toBe(0);
+  await e.page.locator("#warning-wrapper").evaluate(el => { el.hidden = false; });
+  await expect.poll(() => e.page.evaluate(() => clicks.warning)).toBe(1);
+});
+
+test("an ad skip button becoming enabled is handled without periodic polling", async ({ extension: e }) => {
+  await e.open();
+  await e.page.evaluate(() => {
+    const player = document.getElementById("movie_player"); player.classList.add("ad-showing");
+    const skip = document.createElement("button"); skip.className = "ytp-skip-ad-button";
+    skip.textContent = "Skip"; skip.disabled = true; skip.hidden = true;
+    skip.onclick = () => { clicks.skip++; player.classList.remove("ad-showing"); };
+    player.append(skip);
+  });
+  await e.page.waitForTimeout(200);
+  expect(await e.page.evaluate(() => clicks.skip)).toBe(0);
+  await e.page.locator(".ytp-skip-ad-button").evaluate(el => { el.hidden = false; el.disabled = false; });
+  await expect.poll(() => e.page.evaluate(() => clicks.skip)).toBe(1);
+});
+
+test("disabling filters cancels a large in-flight feed batch without leaving hidden cards", async ({ extension: e }) => {
+  await e.open();
+  await e.page.evaluate(() => {
+    const feed = document.createElement("div"); feed.id = "large-feed";
+    for (let i = 0; i < 1200; i++) {
+      const card = document.createElement("ytd-video-renderer");
+      const heading = document.createElement("h3"); const a = document.createElement("a");
+      a.href = `/watch?v=large${i}`; a.textContent = "AI-generated landscape";
+      heading.append(a); card.append(heading); feed.append(card);
+    }
+    document.body.append(feed);
+  });
+  await e.set({ su_hideAI: false, su_hideShorts: false });
+  await e.page.waitForTimeout(250);
+  await expect(e.page.locator("#large-feed [data-su-hide-ai], #large-feed [data-su-hide-shorts]")).toHaveCount(0);
+  await e.set({ su_hideAI: true });
+  await expect(e.page.locator("#large-feed [data-su-hide-ai]")).toHaveCount(1200);
+});
+
+test("feed defaults hide Shorts and explicit AI metadata without hiding mixed shelves, channels or the player", async ({ extension: e }) => {
+  await openFeed(e);
+  for (const id of ["shorts-nav", "shorts-mini-nav", "shorts-section", "shorts-search", "shorts-card", "shorts-absolute", "short-mixed",
+    "modern-shorts-grid", "modern-ai-cell", "ai-title", "ai-badge", "ai-description", "ai-vietnamese", "ai-disclosure", "ai-vietnamese-label", "ai-short"]) {
+    await expect(e.page.locator(`#${id}`)).toBeHidden();
+  }
+  for (const id of ["mixed-shelf", "modern-mixed-grid", "modern-normal-cell", "normal-mixed", "normal-ai-topic", "normal-ai-channel", "normal-negation", "normal-vietnamese", "normal-query", "normal-external", "recycled", "movie_player"]) {
+    await expect(e.page.locator(`#${id}`)).toBeVisible();
+  }
+});
+
+test("popup feed filters are independent, reversible and persist across reloads", async ({ extension: e }) => {
+  await openFeed(e);
+  const popup = await e.context.newPage();
+  await popup.goto(`chrome-extension://${e.id}/popup.html`);
+  const shorts = popup.getByRole("checkbox", { name: "Hide Shorts / Reels", exact: true });
+  const ai = popup.getByRole("checkbox", { name: "Hide AI-generated videos", exact: true });
+  await expect(shorts).toBeEnabled();
+  await expect(shorts).toBeChecked();
+  await expect(ai).toBeChecked();
+  await shorts.uncheck({ force: true });
+  await expect(e.page.locator("#shorts-section")).toBeVisible();
+  await expect(e.page.locator("#shorts-card")).toBeVisible();
+  await expect(e.page.locator("#modern-shorts-grid")).toBeVisible();
+  await expect(e.page.locator("#modern-ai-cell")).toBeHidden();
+  await expect(e.page.locator("#ai-short")).toBeHidden();
+  await ai.uncheck({ force: true });
+  await expect(e.page.locator("#ai-short")).toBeVisible();
+  await expect(e.page.locator("#ai-title")).toBeVisible();
+  await expect(e.page.locator("#modern-ai-cell")).toBeVisible();
+  await expect(e.page.locator("#native-hidden")).toBeHidden();
+  await e.page.reload();
+  await popup.reload();
+  await expect(popup.locator("#shortsToggle")).not.toBeChecked();
+  await expect(popup.locator("#aiToggle")).not.toBeChecked();
+  await expect(e.page.locator("#ai-title")).toBeVisible();
+  await shorts.check({ force: true });
+  await expect(e.page.locator("#ai-short")).toBeHidden();
+  await expect(e.page.locator("#ai-title")).toBeVisible();
+  await ai.check({ force: true });
+  await expect(e.page.locator("#ai-title")).toBeHidden();
+  await expect(e.page.locator("#native-hidden")).toHaveAttribute("hidden", "");
+});
+
+test("saved disabled feed filters are respected on the initial load", async ({ extension: e }) => {
+  await e.set({ su_hideShorts: false, su_hideAI: false });
+  await openFeed(e);
+  await expect(e.page.locator("#shorts-section")).toBeVisible();
+  await expect(e.page.locator("#ai-title")).toBeVisible();
+  await expect(e.page.locator("[data-su-hide-shorts], [data-su-hide-ai]")).toHaveCount(0);
+  await e.set({ su_hideAI: true });
+  await expect(e.page.locator("#ai-title")).toBeHidden();
+  await expect(e.page.locator("#shorts-section")).toBeVisible();
+});
+
+test("infinite scroll and SPA replacement filter new cards and collapse their outer grid cells", async ({ extension: e }) => {
+  await openFeed(e);
+  await e.page.evaluate(() => {
+    window.feedNavigationSentinel = 42;
+    history.pushState({}, "", "/results?search_query=landscape");
+    const container = document.createElement("div");
+    for (const [id, title, href] of [["late-ai", "AI-generated music", "/watch?v=late0000001"], ["late-short", "A Short", "/shorts/late0000002"], ["late-normal", "Real music", "/watch?v=late0000003"]]) {
+      const card = document.createElement("ytd-rich-item-renderer"); card.id = id;
+      const inner = document.createElement("yt-lockup-view-model");
+      const heading = document.createElement("h3"); const link = document.createElement("a");
+      link.textContent = title; link.href = href; heading.append(link); inner.append(heading); card.append(inner); container.append(card);
+    }
+    document.getElementById("feed").replaceChildren(container);
+    window.dispatchEvent(new Event("yt-navigate-finish"));
+  });
+  await expect(e.page.locator("#late-ai")).toBeHidden();
+  await expect(e.page.locator("#late-short")).toBeHidden();
+  await expect(e.page.locator("#late-normal")).toBeVisible();
+  await e.set({ su_hideShorts: false, su_hideAI: false });
+  await expect(e.page.locator("#late-ai")).toBeVisible();
+  await expect(e.page.locator("#late-short")).toBeVisible();
+  expect(await e.page.evaluate(() => feedNavigationSentinel)).toBe(42);
+});
+
+test("recycled cards react to text, title, aria-label and href changes and restore after removal", async ({ extension: e }) => {
+  await openFeed(e);
+  const card = e.page.locator("#recycled");
+  const title = card.locator("h3 a");
+  await title.evaluate(el => { el.firstChild.data = "AI-generated landscape"; });
+  await expect(card).toBeHidden();
+  await title.evaluate(el => { el.firstChild.data = "Real landscape"; });
+  await expect(card).toBeVisible();
+  await title.evaluate(el => el.setAttribute("title", "Video do AI tạo"));
+  await expect(card).toBeHidden();
+  await title.evaluate(el => el.removeAttribute("title"));
+  await expect(card).toBeVisible();
+  await card.locator("badge-shape").evaluate(el => el.setAttribute("aria-label", "Made with AI"));
+  await expect(card).toBeHidden();
+  await card.locator("ytd-badge-supported-renderer").evaluate(el => el.remove());
+  await expect(card).toBeVisible();
+  await title.evaluate(el => el.setAttribute("href", "/shorts/reused00001"));
+  await expect(card).toBeHidden();
+  await title.evaluate(el => el.setAttribute("href", "/watch?v=reused00001"));
+  await expect(card).toBeVisible();
+});
+
+test("a repurposed Shorts shelf loses its filter marker when YouTube removes its Shorts identity", async ({ extension: e }) => {
+  await openFeed(e);
+  await e.page.locator("#shorts-section ytd-rich-shelf-renderer").evaluate(el => {
+    el.removeAttribute("is-shorts");
+    el.textContent = "Regular videos";
+  });
+  await expect(e.page.locator("#shorts-section")).toBeVisible();
+  await expect(e.page.locator("#shorts-section ytd-rich-shelf-renderer")).toBeVisible();
 });
 
 test("saved OFF preferences are respected on first load, including MAIN-world responses", async ({ extension: e }) => {

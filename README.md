@@ -1,51 +1,162 @@
-# Shut Up YouTube
+<p align="center">
+  <img src="icons/stfu-128.png" width="88" height="88" alt="Shut Up YouTube logo">
+</p>
 
-A lightweight Chromium browser extension (`v1.2.3`) that filters player ads, confirms content warnings, removes page clutter, and adds aspect ratio controls.
+<h1 align="center">Shut Up YouTube</h1>
+
+<p align="center">
+  <strong>A quieter YouTube, on your terms.</strong><br>
+  Filter ads, hide distracting feeds, and make the player fit your screen.
+</p>
+
+<p align="center">
+  <a href="manifest.json"><img src="https://img.shields.io/badge/version-2.0.0-2563eb?style=flat-square" alt="Version 2.0.0"></a>
+  <a href="manifest.json"><img src="https://img.shields.io/badge/Manifest-V3-6d28d9?style=flat-square" alt="Manifest V3"></a>
+  <a href="#installation"><img src="https://img.shields.io/badge/browser-Chromium-475569?style=flat-square" alt="Chromium browsers"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-15803d?style=flat-square" alt="MIT license"></a>
+</p>
+
+<p align="center">
+  <a href="#installation">Install</a> &middot;
+  <a href="#features">Features</a> &middot;
+  <a href="#player-controls">Player controls</a> &middot;
+  <a href="#development">Development</a> &middot;
+  <a href="https://github.com/rainaku/Shut-Up-YouTube/issues">Report a bug</a>
+</p>
+
+Shut Up YouTube is a lightweight browser extension for desktop Chromium browsers. It runs on YouTube pages and matching embeds, with independent feature switches and preferences that persist across sessions. Plain JavaScript, no build step, no runtime dependencies.
 
 ## Features
 
-- Removes ad fields from initial player data and subsequent player responses (fetch/XHR), hides banner/feed ad slots, and clicks visible Skip Ad buttons.
-- Reports recognized adblock playback errors in the popup. It leaves the actual error visible and does not force page reloads or substitute a broken embedded player.
-- Automatically confirms supported viewer-discretion and age-warning prompts, including the current YouTube interstitial's link-based Continue control. It supports "I understand", "Tôi hiểu", and "Tiếp tục" in warning dialogs, preserves YouTube's original confirmation parameters, and retries up to four times if the control has not finished initializing. It does not click Sign in, Verify age, or Learn more.
-- Hides YouTube Playables mini-games, merchandise shelves, ticket promos, and ambient video glow effects.
-- Replaces the standard YouTube header logo with the YouTube Premium logo.
-- Adds custom video aspect ratio and ultrawide screen fitting with instant toggles in the player bar and extension popup.
-
-Ad filtering is best effort. A server-side playback denial cannot be overridden when YouTube does not provide playable media. Login/age verification, embedding restrictions, and some ad formats cannot be removed by this extension. The Premium logo is cosmetic and does not grant a subscription.
-
-**Content confirmation and identity verification are different.** Warning Bypass handles the native Continue / I understand action when YouTube offers it. If YouTube only offers Sign in or Verify your age, this version reports that requirement in the popup and leaves the prompt visible. A confirmation click is not reported as successful playback; the popup distinguishes waiting, confirming, video ready, and failed confirmation.
-
-## Video player controls
-
-The extension adds two quick-toggle buttons directly to the bottom-right YouTube player controls:
-
-| Control | Function |
+| Feature | What it does |
 | :--- | :--- |
-| `FIT` | Toggles custom video aspect ratio scaling on or off |
-| `AUTO` | Applies scaling only in Theater and Fullscreen modes, keeping the default view unchanged |
+| **Adblock Fix** | Removes supported ad fields from player responses, hides banner and feed ad slots, and clicks available Skip Ad buttons. |
+| **Warning Bypass** | Confirms supported **Continue / I understand** content-warning prompts, including English and Vietnamese controls. |
+| **Hide Playables** | Hides mini-games, merchandise shelves, and ticket promotions. |
+| **Hide Shorts / Reels** | Hides short-video cards, dedicated shelves, and navigation entries. |
+| **Hide AI-generated videos** | Filters cards with AI disclosures or explicit generation phrases in their titles or description snippets. |
+| **Premium Logo** | Replaces the header logo with the YouTube Premium logo. Cosmetic only; no subscription benefits. |
+| **Video Stretch** | Adds five fit modes, ultrawide ratios, and quick controls inside the player. |
 
-You can also open the extension popup at any time to switch between five aspect ratio modes:
-- `Fill`: Stretches the video to fill the entire player area edge to edge.
-- `Cover`: Zooms and crops the video to cover the screen without distortion.
-- `16:9`, `21:9`, `32:9`: Reshapes the video to those proportions within the player bounds. This can distort the source image; use `Cover` to preserve its proportions.
+All feature switches are **on by default**, with **Fill** selected and **Auto Stretch** limiting video fit to Theater and Fullscreen. The extension also hides ambient video glow.
 
-**AUTO is on by default.** In the standard viewing mode, FIT waits until you switch to Theater/Fullscreen. Turn AUTO off to apply your ratio in the standard player too. Dimensions follow the player when it resizes, and disabling FIT restores YouTube's original video layout. Controls also run inside YouTube embeds.
+<details>
+<summary><strong>Preview the extension popup</strong></summary>
+
+<p align="center">
+  <img src="docs/images/popup.png" width="340" alt="Actual extension popup showing all eight switches enabled and the Fill aspect ratio selected">
+</p>
+
+<p align="center"><sub>Actual popup with default settings. Page status depends on the active tab.</sub></p>
+
+</details>
+
+> [!NOTE]
+> Ad filtering is best effort. The extension cannot override server-side playback blocks, sign-in or age-verification requirements, or embedding restrictions. Warning confirmation works only when YouTube provides a native confirmation action.
 
 ## Installation
 
-1. Download or clone this repository:
-   ```bash
-   git clone https://github.com/w0otdev/Shut-Up-YouTube.git
+Load the source directly as an unpacked extension. **Node.js and npm are only needed for development and tests.**
+
+1. Get the source using **Code → Download ZIP** on [this repository](https://github.com/rainaku/Shut-Up-YouTube), then extract it. Or clone it:
+
+   ```sh
+   git clone https://github.com/rainaku/Shut-Up-YouTube.git
    ```
-2. Open your Chromium browser (Chrome, Brave, Edge, or Vivaldi) and go to `chrome://extensions`.
-3. Turn on Developer mode in the top-right corner.
-4. Click Load unpacked and select the `Shut-Up-YouTube` folder.
 
-After updating an existing installation, click **Reload** on its card in `chrome://extensions`, then refresh your open YouTube tabs. Already-open pages keep their old content scripts until refreshed. Changes in the popup apply immediately afterward; ad data already consumed by the player may require a video reload.
+2. Open your browser's extensions manager:
 
-## Development and verification
+   | Browser | Address |
+   | :--- | :--- |
+   | Google Chrome | `chrome://extensions` |
+   | Microsoft Edge | `edge://extensions` |
+   | Brave | `brave://extensions` |
+   | Vivaldi | `vivaldi://extensions` |
 
-No build step or runtime dependency is required. Browser regression tests use Node.js 20+ and a separately installed Chromium:
+3. Enable **Developer mode**, click **Load unpacked**, and select the extracted or cloned folder **containing `manifest.json`**.
+4. Open or refresh YouTube. Pin **Shut Up YouTube** in your browser toolbar to reach its settings quickly.
+
+The current package targets Chromium desktop browsers; Firefox and Safari are not supported by this manifest.
+
+### Updating
+
+Update the source in the folder you loaded, click **Reload** on the extension's card, then **refresh every open YouTube tab**. Existing pages keep the old content scripts until refreshed.
+
+Popup changes apply immediately after installation or reload. Ad data already consumed by a player may require refreshing the video.
+
+## Player controls
+
+Two buttons appear in the bottom-right player controls, including supported YouTube embeds:
+
+| Button | Behavior |
+| :--- | :--- |
+| **FIT** | Turns custom video fitting on or off. Turning it off restores YouTube's original video layout. |
+| **AUTO** | When on, applies fitting only in Theater and Fullscreen. Turn it off to use the selected ratio in the standard player too. |
+
+Choose a mode in the extension popup:
+
+| Mode | Result |
+| :--- | :--- |
+| **Fill** | Stretches the video to fill the player edge to edge; may distort the image. |
+| **Cover** | Fills the player while preserving the source proportions; crops the edges when necessary. |
+| **16:9** | Reshapes the video to widescreen proportions within the player. |
+| **21:9** | Reshapes the video to ultrawide proportions within the player. |
+| **32:9** | Reshapes the video to super-ultrawide proportions within the player. |
+
+Fixed ratios can distort the source image. Use **Cover** when preserving proportions matters more than keeping every edge visible. Video dimensions follow the player as it resizes.
+
+**FIT is on but nothing changes?** AUTO is also on by default. Switch to Theater or Fullscreen, or turn AUTO off.
+
+## How filtering works
+
+### Shorts and AI-labeled videos
+
+Both feed filters work independently across supported Home, Search, Subscriptions, channel, playlist, and recommendation layouts. They react to newly loaded and reused cards during navigation. Turning a filter off restores matching cards without a page reload; directly opened videos keep their player.
+
+The AI filter reads metadata **already present on a video card**. Examples include:
+
+- Disclosures such as `Made with AI` and `Altered or synthetic content`.
+- Explicit phrases such as `AI-generated`, `generated with AI`, `được tạo bằng AI`, and `do AI tạo`.
+
+It does not analyze footage, fetch every video's description, or contact an AI service. A bare mention of `AI`, a tool name, or a channel name is not enough to match.
+
+**Unlabeled videos can remain visible.** The filter can also hide videos discussing AI-generated content when their card contains a matching phrase. Turn the filter off to restore them.
+
+### Ads and content warnings
+
+Ad filtering operates on initial player data and supported fetch/XHR player responses. Recognized adblock playback errors remain visible, with an explanation in the popup. The extension does not force reload loops or replace the player to conceal a failure.
+
+Warning Bypass uses YouTube's native confirmation control and preserves its original parameters. It supports late-initializing controls with up to four confirmation attempts. The popup distinguishes waiting, confirming, video ready, and failed confirmation; clicking a button alone is not treated as successful playback.
+
+If YouTube only offers **Sign in** or **Verify your age**, that requirement remains visible. The extension does not click those controls or **Learn more**.
+
+## Privacy and permissions
+
+The extension processes page content in your browser, with **no analytics, telemetry, or developer-operated backend**. Its scripts and assets are bundled locally.
+
+| Permission or access | Why it is needed |
+| :--- | :--- |
+| `storage` | Saves feature switches and the selected ratio through `chrome.storage.sync`. Your browser may synchronize these preferences if you enable profile sync. |
+| `*://*.youtube.com/*` | Applies filters and controls to YouTube pages and matching embedded frames. |
+| `*://*.youtube-nocookie.com/*` | Supports YouTube's privacy-enhanced embedded player. |
+
+See the [Privacy Policy](PRIVACY_POLICY.md) for the project's data-handling policy.
+
+## Troubleshooting
+
+| Symptom | What to check |
+| :--- | :--- |
+| Nothing changes after an update | Reload the extension, then refresh the YouTube tab. Confirm that the selected folder contains `manifest.json`. |
+| FIT appears enabled but the video looks unchanged | AUTO limits fitting to Theater and Fullscreen. Change viewing mode or disable AUTO. |
+| A video card disappears unexpectedly | Turn off **Hide Shorts / Reels** or **Hide AI-generated videos** to identify the matching filter and restore the card. |
+| YouTube still shows an adblock error | Read the popup status. A server-side playback denial cannot be fixed by removing ad fields. |
+| A warning remains on screen | Check whether YouTube offers a native confirmation action or requires sign-in/verification. The popup reports pending and failed confirmations. |
+
+For a reproducible problem, [open an issue](https://github.com/rainaku/Shut-Up-YouTube/issues) with your browser version, extension version, relevant settings, page URL, and steps to reproduce. Include the popup status or a screenshot when useful; omit account details and other private information.
+
+## Development
+
+Use **Node.js 20+** and npm. The extension itself runs directly from source; Playwright is a development dependency.
 
 ```sh
 npm ci
@@ -53,26 +164,63 @@ npx playwright install chromium
 npm test
 ```
 
-Tests load the real unpacked extension, including its isolated and MAIN worlds, against controlled YouTube fixtures. They check popup/player synchronization, persisted OFF settings, all fit modes, delayed warnings, link-based interstitials, late initialization and bounded retries, SPA navigation, logo restoration under Trusted Types, response filtering, ad skipping, existing YouTube embeds, and honest reporting of server-side playback blocks.
+The regression suite loads the actual unpacked extension, including its isolated and MAIN execution worlds, against controlled YouTube fixtures. It covers settings persistence, popup/player synchronization, fit geometry, dynamic feed filtering and restoration, native warning confirmation, ad-response filtering, embeds, and navigation without reload loops.
 
-Optional checks against the real YouTube site:
+### Project structure
 
-```sh
-npm run test:live
-npm run test:warning -- "https://www.youtube.com/watch?v=NtKX__-qPSI"
-npm run test:warning -- "https://www.youtube.com/watch?v=NtKX__-qPSI" --cold
+```text
+.
+├── manifest.json          # Permissions, entry points, and script load order
+├── settings.js            # Shared defaults and preference validation
+├── inject.js              # MAIN-world player-response filtering
+├── content.js              # Player controls, video fit, and feature coordination
+├── content.css             # Page cleanup and player styling
+├── activity.js             # Scoped DOM observers and page lifecycle
+├── filters.js              # Shorts and AI-metadata feed filters
+├── warnings.js             # Native warning confirmation and status
+├── logo.js                 # Header logo replacement and restoration
+├── popup.html / popup.js   # Settings UI and active-tab status
+├── sw.js                   # Preference initialization on install/update
+├── icons/                  # Bundled extension artwork
+├── docs/images/            # README screenshots
+└── tests/                  # Fixtures, regression tests, and live checks
 ```
 
-This reports actual playback progress, controls, errors, and a screenshot in `test-results/`; network, consent, and bot restrictions can affect the result. Successful playback of an unrestricted video does not prove that a server-side adblock restriction can be bypassed.
+### Performance
 
-`test:warning` checks the supplied video's real content-warning screen with Warning Bypass OFF, enables it, then requires YouTube to return `OK`, dismiss the warning, and advance playback. `--cold` checks a fresh browser profile with the feature already enabled. These tests use a temporary signed-out profile; they do not read your personal browser profile.
+Work is driven by relevant DOM events, with scoped observers and short batches for feed updates. Visual observers and queued filtering pause in hidden tabs and catch up when visible. Player response hooks preserve the original network response and byte stream; completed JSON/text reads are filtered, while raw stream and binary reads pass through.
 
-## Privacy and legal
+```sh
+npm run test:performance
+```
 
-Shut Up YouTube runs entirely locally on `youtube.com` and `youtube-nocookie.com`. It only uses the `storage` permission to save your toggle preferences locally and collects zero user data or telemetry. See the full [Privacy Policy](PRIVACY_POLICY.md) for details.
+The local benchmark measures idle activity, unrelated comment updates, a 600-card feed, and repeated logo replacement. It reports DOM query counts, browser task time, and retained nodes. These measurements describe extension overhead, not YouTube network latency or total browser memory.
 
-This project is an independent open-source tool and is not affiliated with, endorsed by, or sponsored by YouTube, LLC or Google LLC. The extension is provided strictly "AS IS" without warranty of any kind, and users are solely responsible for complying with YouTube's Terms of Service. Read the full [Terms of Service](TERMS_OF_SERVICE.md) before use.
+### Optional live checks
+
+These commands contact YouTube using temporary, signed-out browser profiles. They do not use your personal browser profile. Consent, network, login, and bot restrictions can affect results.
+
+| Command | Checks |
+| :--- | :--- |
+| `npm run test:live` | Reports playback progress, controls, and page errors. |
+| `npm run test:navigation` | Checks sustained playback through recommendation clicks. |
+| `npm run test:filters` | Toggles Shorts/AI filters on real search results and checks restoration. |
+| `npm run test:warning -- "https://www.youtube.com/watch?v=NtKX__-qPSI"` | Tests the supplied video's native warning with the feature off, then on. |
+| `npm run test:warning -- "https://www.youtube.com/watch?v=NtKX__-qPSI" --cold` | Tests a fresh profile with warning confirmation already enabled. |
+
+Live checks save screenshots and, where applicable, reports in `test-results/`. The AI check requires a result with an explicit matching title; it does not validate detection of unlabeled footage. Playback of an unrestricted video does not prove that server-side restrictions can be bypassed.
+
+## Contributing
+
+Bug reports, compatibility fixes, and focused pull requests are welcome.
+
+1. Describe the problem and how to reproduce it, or reference an existing issue.
+2. Keep changes focused on the relevant module and add regression coverage for behavior changes.
+3. Run `npm test`. For observer or feed-processing changes, also run `npm run test:performance`.
+4. Include the browser version, validation performed, and any remaining limitations in your pull request.
 
 ## License
 
-[MIT License](LICENSE) © 2026 w0otdev
+[MIT](LICENSE) © 2026 w0otdev.
+
+An independent open-source project, not affiliated with or endorsed by YouTube or Google. Provided as-is; see the [Terms of Service](TERMS_OF_SERVICE.md).

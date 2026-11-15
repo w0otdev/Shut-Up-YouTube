@@ -18,8 +18,15 @@
   function cleanPlayer(value) {
     if (!value || typeof value !== "object" || !enabled()) return value;
     if (Array.isArray(value)) {
-      const items = value.map(cleanPlayer);
-      return items.some((item, index) => item !== value[index]) ? items : value;
+      let items = value;
+      for (let index = 0; index < value.length; index++) {
+        const item = cleanPlayer(value[index]);
+        if (item !== value[index]) {
+          if (items === value) items = value.slice();
+          items[index] = item;
+        }
+      }
+      return items;
     }
     let result = value;
     for (const key of adKeys) {
@@ -40,6 +47,9 @@
   }
 
   function cleanText(text) {
+    // Most responses have no ad fields. Leave them untouched without allocating
+    // a second object graph. Escaped keys still go through the JSON parser.
+    if (!enabled() || !/"(?:adPlacements|playerAds|adSlots)"\s*:|\\u/.test(text)) return text;
     try {
       const value = JSON.parse(text);
       const cleaned = cleanPlayer(value);
@@ -62,43 +72,70 @@
     });
   }
 
+  const wrappedResponses = new WeakSet();
+  function wrapResponse(response) {
+    if (wrappedResponses.has(response)) return response;
+    const json = response.json;
+    const text = response.text;
+    const clone = response.clone;
+    try {
+      // Preserve the actual network Response and its byte stream. Replacing it
+      // with a synthetic stream breaks BYOB readers and can interfere with the
+      // browser/other blockers' body handling during video navigation. Only
+      // filter completed JSON/text reads; raw stream consumers pass through.
+      Object.defineProperties(response, {
+        json: { configurable: true, writable: true, value: async function (...args) {
+          const value = await Reflect.apply(json, this, args);
+          return this === response ? cleanPlayer(value) : value;
+        } },
+        text: { configurable: true, writable: true, value: async function (...args) {
+          const value = await Reflect.apply(text, this, args);
+          return this === response ? cleanText(value) : value;
+        } },
+        clone: { configurable: true, writable: true, value: function (...args) {
+          const copy = Reflect.apply(clone, this, args);
+          return this === response ? wrapResponse(copy) : copy;
+        } }
+      });
+      wrappedResponses.add(response);
+    } catch {
+      // A response protected by another extension stays usable as-is.
+      for (const [name, method] of [["json", json], ["text", text], ["clone", clone]]) {
+        try {
+          if (response[name] !== method) Object.defineProperty(response, name, { configurable: true, writable: true, value: method });
+        } catch { /* Leave externally protected properties alone. */ }
+      }
+    }
+    return response;
+  }
+
   const originalFetch = window.fetch;
   window.fetch = async function (...args) {
     const response = await Reflect.apply(originalFetch, this, args);
-    const url = args[0] instanceof Request ? args[0].url : String(args[0]);
-    if (!enabled() || !playerEndpoint(url) || !response.ok) return response;
+    if (!enabled() || !response.ok || !response.body) return response;
     try {
-      const original = await response.clone().text();
-      const cleaned = cleanText(original);
-      if (cleaned === original) return response;
-      const headers = new Headers(response.headers);
-      headers.delete("content-length");
-      headers.delete("content-encoding");
-      const replacement = new Response(cleaned, {
-        status: response.status, statusText: response.statusText, headers
-      });
-      for (const key of ["url", "type", "redirected"]) {
-        Object.defineProperty(replacement, key, { value: response[key] });
-      }
-      return replacement;
-    } catch { return response; }
+      const url = args[0] instanceof Request ? args[0].url : String(args[0]);
+      return playerEndpoint(url) ? wrapResponse(response) : response;
+    } catch {
+      return response;
+    }
   };
 
   // YouTube also uses XHR, including responseType=json, during SPA navigation.
+  const xhrCache = new WeakMap();
   for (const property of ["response", "responseText"]) {
     const descriptor = Object.getOwnPropertyDescriptor(XMLHttpRequest.prototype, property);
     if (!descriptor?.get || !descriptor.configurable) continue;
-    const cache = new WeakMap();
     Object.defineProperty(XMLHttpRequest.prototype, property, {
       ...descriptor,
       get() {
         const original = descriptor.get.call(this);
         if (!enabled() || this.readyState !== 4 || !playerEndpoint(this.responseURL)) return original;
         if (this.responseType && this.responseType !== "text" && this.responseType !== "json") return original;
-        const previous = cache.get(this);
+        const previous = xhrCache.get(this);
         if (previous && previous.original === original) return previous.cleaned;
         const cleaned = typeof original === "string" ? cleanText(original) : cleanPlayer(original);
-        cache.set(this, { original, cleaned });
+        xhrCache.set(this, { original, cleaned });
         return cleaned;
       }
     });

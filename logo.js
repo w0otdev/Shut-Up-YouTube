@@ -38,14 +38,16 @@
     "fill": "currentColor"
   }
 ];
-  const replacements = new Map();
+  // Weak keys let SPA-detached logos and their saved SVGs be garbage collected.
+  const replacements = new WeakMap();
   globalThis.suSyncLogo = function (enabled) {
-    for (const [logo, saved] of replacements) {
-      if (!enabled && saved.custom.parentNode) saved.custom.replaceWith(saved.original);
-      if (!enabled || !logo.contains(saved.custom)) replacements.delete(logo);
-    }
-    if (!enabled) return;
     for (const logo of document.querySelectorAll("ytd-logo")) {
+      const saved = replacements.get(logo);
+      if (saved) {
+        if (!enabled && logo.contains(saved.custom)) saved.custom.replaceWith(saved.original);
+        if (!enabled || !logo.contains(saved.custom)) replacements.delete(logo);
+      }
+      if (!enabled) continue;
       if (replacements.has(logo)) continue;
       const original = logo.querySelector("svg");
       if (!original) continue;
