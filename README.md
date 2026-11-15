@@ -183,8 +183,23 @@ The regression suite loads the actual unpacked extension, including its isolated
 ├── sw.js                   # Preference initialization on install/update
 ├── icons/                  # Bundled extension artwork
 ├── docs/images/            # README screenshots
+├── scripts/                # Release packaging
 └── tests/                  # Fixtures, regression tests, and live checks
 ```
+
+### Packaging a release
+
+Create an extension ZIP with only the files needed for distribution:
+
+```sh
+npm run package
+```
+
+The command writes `dist/shut-up-youtube-<version>.zip`, with `manifest.json` at the archive root. It includes the runtime scripts, popup, referenced icons, license, and policy documents. Tests, screenshots, original artwork, dependencies, local caches, and development configuration are excluded through an explicit file allowlist in [scripts/package.cjs](scripts/package.cjs).
+
+Packaging uses Node.js and the system archive tool: Windows PowerShell on Windows, or `zip` on macOS/Linux. No npm dependencies or build step are needed for this command. Extract the ZIP and select its folder with **Load unpacked** to verify the packaged extension.
+
+Generated packages, test output, dependencies, logs, and local tool/editor files are excluded from Git through [.gitignore](.gitignore). Source tests and documentation remain version-controlled.
 
 ### Performance
 

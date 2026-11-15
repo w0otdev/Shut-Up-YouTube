@@ -3,6 +3,7 @@
   "version": "2.0.0",
   "private": true,
   "scripts": {
+    "package": "node scripts/package.cjs",
     "test": "playwright test",
     "test:live": "node tests/live-smoke.cjs",
     "test:navigation": "node tests/live-navigation.cjs",

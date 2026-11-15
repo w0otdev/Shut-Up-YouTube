@@ -1,3 +1,23 @@
-node_modules/
-test-results/
-playwright-report/
+# Dependencies and generated release packages
+/node_modules/
+/dist/
+
+# Test output
+/test-results/
+/playwright-report/
+/blob-report/
+/coverage/
+
+# Local tools and editor settings
+/.impeccable/
+/.idea/
+/.vscode/
+
+# Logs, temporary files, and operating-system metadata
+*.log
+*.tmp
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+Desktop.ini
