@@ -1,0 +1,32 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+body { margin: 0; }
+ytd-watch-flexy, ytd-logo, ytd-rich-item-renderer { display: block; }
+#movie_player { position: relative; width: 800px; height: 450px; background: #222; }
+.html5-video-container { position: absolute; inset: 0; }
+video { position: absolute; width: 640px; height: 360px; top: 45px; left: 80px; }
+.ytp-right-controls { position: absolute; bottom: 0; right: 0; height: 40px; z-index: 70; }
+#error-screen { position: absolute; inset: 50px; color: white; }
+</style>
+<script>
+window.ytInitialPlayerResponse = {
+  videoDetails: { videoId: 'abcdefghijk' },
+  playabilityStatus: { status: 'OK' },
+  streamingData: { formats: [{ url: 'https://example.invalid/video' }] },
+  adPlacements: [{ id: 1 }], playerAds: [{ id: 2 }], adSlots: [{ id: 3 }]
+};
+window.clicks = { warning: 0, unrelated: 0, skip: 0 };
+</script>
+</head><body>
+<ytd-logo is-red-logo><svg width="90" viewBox="0 0 90 20"><path id="original-logo" d="M0 0h20v20H0z" /></svg></ytd-logo>
+<ytd-watch-flexy>
+  <div id="movie_player">
+    <div class="html5-video-container"><video class="html5-main-video"></video></div>
+    <div class="ytp-right-controls"></div>
+  </div>
+</ytd-watch-flexy>
+<ytd-ad-slot-renderer id="ad-slot">Banner ad</ytd-ad-slot-renderer>
+<ytd-rich-item-renderer id="games"><a href="/playables/game">Playables</a></ytd-rich-item-renderer>
+<button id="unrelated" onclick="clicks.unrelated++">I understand</button>
+</body></html>

@@ -1,0 +1,31 @@
+<!-- Sanitized structure captured from NtKX__-qPSI on 2026-11-15.
+     The primary action is intentionally an anchor WITHOUT role=button. -->
+<yt-playability-error-supported-renderers id="error-screen">
+  <yt-player-interstitial-renderer role="dialog" aria-label="Viewer discretion is advised">
+    <yt-interstitial-view-model>
+      <div class="interstitialViewModelTextTitle">Viewer discretion is advised</div>
+      <div class="interstitialViewModelTextDescription">This video may be inappropriate for some viewers.</div>
+      <div class="interstitialViewModelButtonContainer">
+        <button-view-model class="interstitialViewModelPrimaryButtonItem">
+          <a id="native-confirmation" href="/watch?v=abcdefghijk&amp;pp=original-player-params&amp;rco=1" aria-disabled="false" force-new-state="true">
+            <span>I understand and wish to proceed</span>
+          </a>
+        </button-view-model>
+        <button-view-model class="interstitialViewModelSecondaryButtonItem">
+          <a id="learn-more" href="https://support.google.com/youtube/answer/2802245">Learn more</a>
+        </button-view-model>
+      </div>
+    </yt-interstitial-view-model>
+  </yt-player-interstitial-renderer>
+</yt-playability-error-supported-renderers>
+<script>
+document.getElementById('native-confirmation').addEventListener('click', event => {
+  event.preventDefault();
+  window.clicks.warning++;
+  window.confirmationHref = event.currentTarget.getAttribute('href');
+  document.getElementById('error-screen').remove();
+});
+document.getElementById('learn-more').addEventListener('click', event => {
+  event.preventDefault(); window.clicks.unrelated++;
+});
+</script>

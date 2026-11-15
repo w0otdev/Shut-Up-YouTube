@@ -21,7 +21,7 @@ Shut Up YouTube is an independent, open-source project developed by `w0otdev`.
 
 The Software functions strictly as a local user-agent customization script inside your web browser, comparable to a custom user stylesheet or local DOM accessibility tool:
 
-- All modifications occur locally within your browser's Document Object Model (DOM) on pages you load in your own browser session.
+- Modifications occur locally within your browser's Document Object Model (DOM) and player responses on pages you load in your own browser session.
 - The Software does not access, attack, probe, decrypt, or modify any remote servers, private APIs, authentication systems, or Digital Rights Management (DRM / Widevine) mechanisms belonging to Google LLC or any third party.
 - The Software does not download, redistribute, re-host, or rip copyrighted audio or video streams.
 
@@ -35,7 +35,7 @@ Your access to and use of `youtube.com` and `youtube-nocookie.com` are governed 
 
 ## 5. Age-restricted content and warning bypass
 
-The "Warning Bypass" feature automates clicking the confirmation button on age or content advisory overlays inside the video player.
+The "Warning Bypass" feature automates clicking supported content advisory confirmation buttons inside the video player. It does not bypass server-side age verification, sign-in requirements, or access restrictions.
 
 - You may only enable and use this feature if you are of legal adult age in your country or jurisdiction of residence.
 - If you are a minor or are otherwise restricted by law from viewing age-gated or sensitive material, you must disable the "Warning Bypass" toggle or refrain from using the Software.

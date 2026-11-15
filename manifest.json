@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Shut Up YouTube",
-  "version": "1.2.1",
-  "description": "All-in-one YouTube enhancer: Adblock error fix, warning bypass, Playables remover, Custom Aspect Ratio, and Premium Logo.",
+  "version": "1.2.3",
+  "description": "YouTube player ad filtering, content warning confirmation, Playables hiding, custom aspect ratios, and a cosmetic Premium logo.",
   "permissions": [
     "storage"
   ],
@@ -22,16 +22,17 @@
       "js": ["inject.js"],
       "run_at": "document_start",
       "world": "MAIN",
-      "all_frames": false
+      "all_frames": true
     },
     {
       "matches": [
         "*://*.youtube.com/*",
         "*://*.youtube-nocookie.com/*"
       ],
-      "js": ["content.js"],
+      "js": ["settings.js", "logo.js", "warnings.js", "content.js"],
+      "css": ["content.css"],
       "run_at": "document_start",
-      "all_frames": false
+      "all_frames": true
     }
   ],
   "action": {

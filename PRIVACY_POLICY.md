@@ -1,6 +1,6 @@
 # Privacy Policy
 
-Last updated: November 4, 2026
+Last updated: November 15, 2026
 
 This Privacy Policy explains how the Shut Up YouTube browser extension ("the Software"), developed by `w0otdev` ("the Developer"), handles data when installed in your Chromium-based web browser.
 
@@ -33,11 +33,11 @@ These seven keys never leave your browser except through your browser vendor's b
 ## 3. Host permissions and network activity
 
 ### Host permissions (`*://*.youtube.com/*` and `*://*.youtube-nocookie.com/*`)
-The Software requests host access only for `youtube.com` and `youtube-nocookie.com`. This permission is required by the Manifest V3 platform so the browser can run the extension's local scripts (`content.js` and `inject.js`) on YouTube pages to apply CSS rules, render the player aspect ratio buttons, click through warning prompts, and manage page reloads during video navigation. The Software cannot read or modify any other websites you visit.
+The Software requests host access only for `youtube.com` and `youtube-nocookie.com`. This allows its local scripts to run on YouTube pages and matching embedded frames, apply CSS, render aspect ratio controls, confirm content warnings, replace the logo, and remove ad fields from player responses inside your browser. It does not force page reloads during navigation. The Software cannot read or modify unrelated websites.
 
-### Preconnect hints and fonts
-- When a YouTube page loads, `content.js` inserts standard `<link rel="preconnect">` tags pointing to official Google/YouTube media domains (`https://i.ytimg.com`, `https://yt3.ggpht.com`, and `https://www.gstatic.com`) to reduce latency when YouTube loads thumbnails and static assets.
-- When you open the extension popup (`popup.html`), the popup loads the `Google Sans` and `Inter` stylesheets from `https://fonts.googleapis.com` and `https://fonts.gstatic.com` to render the popup interface.
+### Player responses and popup assets
+- Player responses are filtered locally as YouTube loads them. No third-party proxy is used, and the extension does not send additional player requests or create replacement players.
+- The popup uses system fonts and bundled assets. It makes no external font requests, and the extension adds no preconnect hints.
 - No requests are ever sent to any server owned or operated by `w0otdev`.
 
 ## 4. Chrome Web Store user data policy compliance

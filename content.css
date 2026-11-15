@@ -1,0 +1,35 @@
+#cinematics, #cinematics-container { display: none !important; }
+html.su-adblock-on :is(#player-ads, .ytp-ad-overlay-container, ytd-ad-slot-renderer,
+  ytd-in-feed-ad-layout-renderer, ytd-banner-promo-renderer, ytd-display-ad-renderer,
+  ytd-masthead-ad-v3-renderer, #masthead-ad) { display: none !important; }
+html.su-playables-on :is(ytd-merch-shelf-renderer, #ticket-shelf, ytd-mini-game-card-view-model),
+html.su-playables-on :is(ytd-rich-section-renderer, ytd-rich-shelf-renderer,
+  ytd-reel-shelf-renderer, ytd-horizontal-card-list-renderer, ytd-guide-entry-renderer,
+  ytd-mini-guide-entry-renderer, ytd-rich-item-renderer):has(a[href*='/playables'],
+  ytd-mini-game-card-view-model) { display: none !important; }
+
+#movie_player.ytvr-stretch-enabled { overflow: hidden !important; }
+#movie_player.ytvr-stretch-enabled .html5-video-container {
+  width: 100% !important; height: 100% !important;
+}
+#movie_player.ytvr-stretch-enabled video.html5-main-video {
+  width: var(--su-video-width) !important;
+  height: var(--su-video-height) !important;
+  max-width: none !important; max-height: none !important;
+  left: 50% !important; top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  object-fit: fill !important;
+}
+#movie_player.ytvr-stretch-enabled.ytvr-ratio-cover video.html5-main-video {
+  object-fit: cover !important;
+}
+.ytvr-button-container { display: inline-flex; align-items: center; height: 100%; vertical-align: top; }
+.ytvr-control-btn {
+  display: inline-flex !important; align-items: center; justify-content: center;
+  width: 44px !important; height: 100%; padding: 0 !important;
+  background: transparent; border: 0; color: white; cursor: pointer;
+  font: 600 11px Arial, sans-serif; opacity: .9;
+}
+.ytvr-control-btn.active { color: #ff496b; }
+.ytvr-control-btn:focus-visible { outline: 2px solid #8ab4f8; outline-offset: -3px; }
+.ytvr-control-btn:hover { opacity: 1; }

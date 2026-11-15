@@ -1,0 +1,13 @@
+{
+  "name": "shut-up-youtube",
+  "version": "1.2.3",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:live": "node tests/live-smoke.cjs",
+    "test:warning": "node tests/live-warning.cjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.1"
+  }
+}

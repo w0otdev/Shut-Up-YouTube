@@ -1,79 +1,75 @@
 "use strict";
+document.addEventListener("DOMContentLoaded", async () => {
+  const toggleKeys = {
+    adblockToggle: "su_adblockFix", warningToggle: "su_warningBypass",
+    playablesToggle: "su_hidePlayables", logoToggle: "su_premiumLogo",
+    enableToggle: "ytvr_enabled", autoStretchToggle: "ytvr_autoStretch"
+  };
+  const ratios = [...document.querySelectorAll(".ratio-btn")];
+  const status = document.getElementById("pageStatus");
+  const error = document.getElementById("saveError");
+  let settings = SU_SETTINGS.normalize();
+  let ready = false;
 
-document.addEventListener("DOMContentLoaded", function () {
-  let adblockToggle = document.getElementById("adblockToggle");
-  let warningToggle = document.getElementById("warningToggle");
-  let playablesToggle = document.getElementById("playablesToggle");
-  let logoToggle = document.getElementById("logoToggle");
-  let enableToggle = document.getElementById("enableToggle");
-  let autoStretchToggle = document.getElementById("autoStretchToggle");
-  let ratioButtons = document.querySelectorAll(".ratio-btn");
-  let controlsSection = document.getElementById("controlsSection");
-
-  let keys = [
-    "su_adblockFix",
-    "su_warningBypass",
-    "su_hidePlayables",
-    "su_premiumLogo",
-    "ytvr_enabled",
-    "ytvr_ratio",
-    "ytvr_autoStretch"
-  ];
-
-  function syncUiState() {
-    controlsSection.style.opacity = enableToggle.checked ? "1" : "0.4";
-    controlsSection.style.pointerEvents = enableToggle.checked ? "auto" : "none";
-  }
-
-  chrome.storage.sync.get(keys, function (res) {
-    let data = res || {};
-    adblockToggle.checked = data.su_adblockFix !== undefined ? data.su_adblockFix : true;
-    warningToggle.checked = data.su_warningBypass !== undefined ? data.su_warningBypass : true;
-    playablesToggle.checked = data.su_hidePlayables !== undefined ? data.su_hidePlayables : true;
-    logoToggle.checked = data.su_premiumLogo !== undefined ? data.su_premiumLogo : true;
-    enableToggle.checked = data.ytvr_enabled !== undefined ? data.ytvr_enabled : true;
-    autoStretchToggle.checked = data.ytvr_autoStretch !== undefined ? data.ytvr_autoStretch : true;
-
-    let savedRatio = data.ytvr_ratio || "fill";
-    for (let i = 0; i < ratioButtons.length; i++) {
-      let btn = ratioButtons[i];
-      btn.classList.toggle("active", btn.getAttribute("data-ratio") === savedRatio);
+  function render() {
+    for (const [id, key] of Object.entries(toggleKeys)) {
+      const input = document.getElementById(id);
+      input.checked = settings[key];
+      input.disabled = !ready || (id === "autoStretchToggle" && !settings.ytvr_enabled);
+      input.setAttribute("aria-label", input.closest(".row").querySelector(".row-title").textContent);
     }
-    syncUiState();
-  });
-
-  adblockToggle.addEventListener("change", function () {
-    chrome.storage.sync.set({ su_adblockFix: adblockToggle.checked });
-  });
-
-  warningToggle.addEventListener("change", function () {
-    chrome.storage.sync.set({ su_warningBypass: warningToggle.checked });
-  });
-
-  playablesToggle.addEventListener("change", function () {
-    chrome.storage.sync.set({ su_hidePlayables: playablesToggle.checked });
-  });
-
-  logoToggle.addEventListener("change", function () {
-    chrome.storage.sync.set({ su_premiumLogo: logoToggle.checked });
-  });
-
-  enableToggle.addEventListener("change", function () {
-    chrome.storage.sync.set({ ytvr_enabled: enableToggle.checked });
-    syncUiState();
-  });
-
-  autoStretchToggle.addEventListener("change", function () {
-    chrome.storage.sync.set({ ytvr_autoStretch: autoStretchToggle.checked });
-  });
-
-  for (let i = 0; i < ratioButtons.length; i++) {
-    ratioButtons[i].addEventListener("click", function () {
-      for (let j = 0; j < ratioButtons.length; j++) {
-        ratioButtons[j].classList.remove("active");
-      }
-      this.classList.add("active");
-      chrome.storage.sync.set({ ytvr_ratio: this.getAttribute("data-ratio") });
-    });
+    document.getElementById("controlsSection").style.opacity = settings.ytvr_enabled ? "1" : "0.4";
+    for (const button of ratios) {
+      const active = button.dataset.ratio === settings.ytvr_ratio;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", String(active));
+      button.disabled = !ready || !settings.ytvr_enabled;
+    }
   }
+
+  async function updateStatus() {
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      const result = await chrome.tabs.sendMessage(tab.id, { type: "su-status" }, { frameId: 0 });
+      status.textContent = [result.warning?.message, result.playback, result.stretch].filter(Boolean).join(" ");
+    } catch {
+      status.textContent = "Open or reload a YouTube tab to apply this extension.";
+    }
+  }
+
+  async function save(patch) {
+    settings = SU_SETTINGS.normalize({ ...settings, ...patch });
+    render();
+    try {
+      await chrome.storage.sync.set(patch);
+      error.textContent = "";
+      await updateStatus();
+    } catch {
+      error.textContent = "Settings could not be saved. Please try again.";
+      settings = SU_SETTINGS.normalize(await chrome.storage.sync.get(Object.keys(SU_SETTINGS.defaults)).catch(() => ({})));
+      render();
+    }
+  }
+
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== "sync") return;
+    for (const key of Object.keys(SU_SETTINGS.defaults)) {
+      if (changes[key]) settings[key] = changes[key].newValue;
+    }
+    settings = SU_SETTINGS.normalize(settings);
+    render();
+    updateStatus();
+  });
+  for (const [id, key] of Object.entries(toggleKeys)) {
+    document.getElementById(id).addEventListener("change", event => save({ [key]: event.target.checked }));
+  }
+  for (const button of ratios) button.addEventListener("click", () => save({ ytvr_ratio: button.dataset.ratio }));
+  render();
+  try {
+    settings = SU_SETTINGS.normalize(await chrome.storage.sync.get(Object.keys(SU_SETTINGS.defaults)));
+    ready = true;
+    render();
+  } catch { error.textContent = "Could not load settings. Reopen the popup to retry."; }
+  updateStatus();
+  setInterval(updateStatus, 1500);
 });

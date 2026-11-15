@@ -3,9 +3,6 @@
 <head>
 <meta charset="utf-8">
 <title>Shut Up YouTube !</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600&family=Inter:wght@400;500;600&display=swap">
 <style>
   * {
     box-sizing: border-box;
@@ -13,12 +10,12 @@
     padding: 0;
   }
   body {
-    width: 310px;
+    width: 340px;
     padding: 16px;
     background: #0b0c0e;
     color: #e8eaed;
     font-family: 'Google Sans', 'Google Sans Text', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    font-size: 13px;
+    font-size: 14px;
     line-height: 1.4;
     letter-spacing: -0.01em;
     -webkit-font-smoothing: antialiased;
@@ -68,7 +65,7 @@
     color: #e8eaed;
   }
   .row-sub {
-    font-size: 11px;
+    font-size: 12px;
     color: #9aa0a6;
   }
   .switch {
@@ -79,9 +76,13 @@
     flex-shrink: 0;
   }
   .switch input {
+    position: absolute;
+    inset: 0;
     opacity: 0;
-    width: 0;
-    height: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    cursor: pointer;
   }
   .slider {
     position: absolute;
@@ -115,7 +116,7 @@
     transition: opacity 0.15s ease;
   }
   .label-title {
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 500;
     color: #9aa0a6;
     margin-bottom: 8px;
@@ -132,7 +133,7 @@
     border-radius: 6px;
     color: #9aa0a6;
     font-family: inherit;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 500;
     cursor: pointer;
     text-align: center;
@@ -148,6 +149,10 @@
     color: #0b0c0e;
     font-weight: 600;
   }
+  .ratio-btn:disabled { cursor: default; }
+  .status { margin-top: 12px; color: #9aa0a6; font-size: 12px; line-height: 1.5; }
+  #saveError { color: #ff8a80; }
+  .switch input:focus-visible + .slider { outline: 2px solid #fff; outline-offset: 3px; }
 </style>
 </head>
 <body>
@@ -159,8 +164,8 @@
   <div class="toggle-list">
     <div class="row">
       <div class="row-text">
-        <span class="row-title">Adblock Bypass</span>
-        <span class="row-sub">Fix player block and strip ad slots</span>
+        <span class="row-title">Adblock Fix</span>
+        <span class="row-sub">Filter player ads and click available Skip buttons</span>
       </div>
       <label class="switch">
         <input type="checkbox" id="adblockToggle" checked>
@@ -171,7 +176,7 @@
     <div class="row">
       <div class="row-text">
         <span class="row-title">Warning Bypass</span>
-        <span class="row-sub">Auto-skip age and content warnings</span>
+        <span class="row-sub">Confirm viewer-discretion and age-warning prompts</span>
       </div>
       <label class="switch">
         <input type="checkbox" id="warningToggle" checked>
@@ -235,6 +240,10 @@
     </div>
   </div>
 
+  <p class="status" id="pageStatus" role="status">Checking the current tab…</p>
+  <p class="status">AUTO limits video fit to theater/fullscreen. Server-side age, login, and embedding restrictions still apply.</p>
+  <p class="status" id="saveError" role="alert"></p>
+  <script src="settings.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>
